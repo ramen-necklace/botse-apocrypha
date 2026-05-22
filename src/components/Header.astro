@@ -11,12 +11,6 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
         <span class="brand-sub">The Elder Scrolls: Betrayal of the Second Era</span>
       </span>
     </a>
-    <nav class="site-nav">
-      <a href={`${base}/`}>Лента</a>
-      <a href="https://app.pagescms.org/" rel="noopener noreferrer" target="_blank" class="muted">
-        Редактировать
-      </a>
-    </nav>
   </div>
 </header>
 
@@ -28,10 +22,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   .header-inner {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding-top: 0.7rem;
     padding-bottom: 0.7rem;
-    gap: 0.75rem;
   }
   .brand {
     display: flex;
@@ -63,18 +55,8 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .site-nav {
-    display: flex;
-    gap: 1rem;
-    font-family: var(--font-display);
-    font-size: 0.88rem;
-    letter-spacing: 0.03em;
-    flex-shrink: 0;
-  }
-  /* На мобильнике подзаголовок прячем и оставляем только Лента/Редактировать */
   @media (max-width: 560px) {
-    .brand-sub { display: none; }
     .brand-title { font-size: 1.05rem; }
-    .site-nav { font-size: 0.82rem; gap: 0.7rem; }
+    .brand-sub { font-size: 0.72rem; }
   }
 </style>

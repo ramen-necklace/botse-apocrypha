@@ -51,11 +51,18 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     color: var(--text-dim);
     white-space: nowrap;
     transition: border-color 0.15s, color 0.15s;
+    -webkit-tap-highlight-color: transparent;
   }
-  .chip:hover {
-    border-color: var(--gold-dim);
-    color: var(--gold);
+  /* hover-эффект — только на устройствах, где реальный hover есть (десктоп) */
+  @media (hover: hover) {
+    .chip:hover {
+      border-color: var(--gold-dim);
+      color: var(--gold);
+    }
   }
+  /* Подсветка focus — только клавиатурой, не при tap'е и не при удержании */
+  .chip:focus { outline: none; }
+  .chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .chip.active {
     border-color: var(--gold);
     color: var(--gold-bright);
@@ -69,8 +76,6 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     border-radius: 999px;
   }
 
-  /* На мобильнике — горизонтальный скролл и градиент-фейд справа,
-     чтобы намекнуть, что чипы можно скроллить. */
   @media (max-width: 640px) {
     .chips-wrap {
       mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
@@ -87,3 +92,20 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     .chip { scroll-snap-align: start; }
   }
 </style>
+
+<script>
+  // После перехода между категориями (включая View Transitions) — подкрутить
+  // горизонтальный скролл чипов так, чтобы активная категория была видна.
+  // Без этого на мобиле полоска возвращается в начало («Все»), и теряется контекст.
+  function focusActiveChip() {
+    const active = document.querySelector<HTMLElement>('.chip.active');
+    if (!active) return;
+    const wrap = active.closest<HTMLElement>('.chips');
+    if (!wrap) return;
+    // Если влезает целиком — ничего не делаем (десктоп). На мобиле — центрируем.
+    if (wrap.scrollWidth <= wrap.clientWidth) return;
+    active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'instant' as ScrollBehavior });
+  }
+  document.addEventListener('astro:page-load', focusActiveChip);
+  focusActiveChip();
+</script>
