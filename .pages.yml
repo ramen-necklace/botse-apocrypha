@@ -17,7 +17,7 @@ content:
     path: src/content/posts
     format: yaml-frontmatter
     extension: md
-    # Имя файла генерится автоматом из времени создания записи — id руками вводить не нужно.
+    # Имя файла генерится автоматом из времени создания — id руками вводить не нужно.
     filename:
       template: "{year}-{month}-{day}-{hour}{minute}{second}.md"
       field: create
@@ -62,40 +62,32 @@ content:
             - Прочее
 
       - name: tags
-        label: Теги
-        type: list
-        required: false
-        default: []
+        label: Теги (опционально)
+        type: string
+        list: true
+        description: Ключевые слова для группировки и поиска. Например - предзаказ, лавка, кампания. Можно не заполнять.
 
       - name: sources
-        label: Внешние ссылки
-        type: list
-        required: false
-        default: []
-        field:
-          type: object
-          fields:
-            - { name: label, label: Подпись, type: string }
-            - { name: url, label: URL, type: string }
+        label: Внешние ссылки (опционально)
+        type: object
+        list: true
+        fields:
+          - { name: label, label: Подпись, type: string }
+          - { name: url, label: URL, type: string }
 
       - name: telegram_url
         label: Прикреплён файл в Telegram (опционально)
         type: string
-        required: false
         description: Ссылка на пост в Telegram, если к статье прикреплён большой файл, который не лезет в репо (PDF, TTSMOD и т.п.).
 
-      - name: images
-        label: Картинки
-        type: list
-        required: false
-        default: []
-        field:
-          type: image
-
       - name: cover
-        label: Обложка
+        label: Обложка (опционально)
         type: image
-        required: false
+
+      - name: images
+        label: Картинки в статье (опционально)
+        type: image
+        list: true
 
       - name: body
         label: Текст
