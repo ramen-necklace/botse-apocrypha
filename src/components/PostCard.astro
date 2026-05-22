@@ -34,7 +34,13 @@ const categoryHref = `${base}/category/${catSlug}/`;
 <article class="card">
   {post.data.cover && (
     <div class="cover">
-      <img src={`${base}/${post.data.cover.replace(/^\//, '')}`} alt="" loading="lazy" />
+      <picture>
+        <source
+          type="image/webp"
+          srcset={`${base}/${post.data.cover.replace(/^\//, '').replace(/\.(jpe?g|png)$/i, '.webp')}`}
+        />
+        <img src={`${base}/${post.data.cover.replace(/^\//, '')}`} alt="" loading="lazy" />
+      </picture>
     </div>
   )}
   <div class="body">
@@ -69,6 +75,7 @@ const categoryHref = `${base}/category/${catSlug}/`;
     transform: translateY(-2px);
   }
   .cover { aspect-ratio: 16 / 9; overflow: hidden; border-bottom: 1px solid var(--border); }
+  .cover picture { display: block; width: 100%; height: 100%; }
   .cover img { width: 100%; height: 100%; object-fit: cover; }
   .body { padding: 1rem 1.2rem 1.2rem; }
   .meta {

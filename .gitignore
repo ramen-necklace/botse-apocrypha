@@ -30,6 +30,9 @@ Thumbs.db
 __pycache__/
 *.pyc
 
+# --- WebP-версии картинок (генерятся pre-build из jpg/png) ---
+public/images/**/*.webp
+
 # --- Локальная памятка / конфиги AI-ассистента, не для публикации ---
 CLAUDE.md
 .claude/

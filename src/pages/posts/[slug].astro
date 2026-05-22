@@ -80,7 +80,13 @@ const pageTitle = post.data.title?.trim() || `${post.data.category} · ${dateStr
     </header>
 
     {post.data.cover && (
-      <img class="cover" src={`${base}/${post.data.cover.replace(/^\//, '')}`} alt="" />
+      <picture class="cover">
+        <source
+          type="image/webp"
+          srcset={`${base}/${post.data.cover.replace(/^\//, '').replace(/\.(jpe?g|png)$/i, '.webp')}`}
+        />
+        <img src={`${base}/${post.data.cover.replace(/^\//, '')}`} alt="" />
+      </picture>
     )}
 
     <div class="prose dropcap">
@@ -152,10 +158,13 @@ const pageTitle = post.data.title?.trim() || `${post.data.category} · ${dateStr
   }
   .tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.3rem; }
   .cover {
+    display: block;
+    margin: 0 0 1.5rem;
+  }
+  .cover img {
     width: 100%;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    margin: 0 0 1.5rem;
   }
   .prose :global(p) { margin-bottom: 1.1em; }
   .prose :global(img) {
