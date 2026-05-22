@@ -18,13 +18,23 @@ const dateStr = post.data.date.toLocaleDateString('ru-RU', {
   year: 'numeric',
 });
 const catSlug = categorySlug(post.data.category);
+
+const rawTitle = post.data.title?.trim();
+const cleanBody = post.body
+  .replace(/<https?:\/\/[^>\s]+>/g, '')
+  .replace(/\bhttps?:\/\/\S+/g, '')
+  .replace(/[#>*_`\[\]\(\)!]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim();
+const displayTitle = rawTitle || cleanBody.slice(0, 80) + (cleanBody.length > 80 ? '…' : '') || `${post.data.category} · ${dateStr}`;
+const pageTitle = rawTitle || `${post.data.category} · ${dateStr}`;
 ---
 
-<Base title={`${post.data.title} · Апокриф BotSE`}>
+<Base title={`${pageTitle} · Апокриф BotSE`}>
   <article class="post">
     <header class="post-head">
       <a href={`${base}/category/${catSlug}/`} class="cat">{post.data.category}</a>
-      <h1>{post.data.title}</h1>
+      <h1>{displayTitle}</h1>
       <p class="meta muted">
         <time datetime={post.data.date.toISOString()}>{dateStr}</time>
       </p>

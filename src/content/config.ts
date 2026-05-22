@@ -19,7 +19,7 @@ export type Category = (typeof CATEGORIES)[number];
 const posts = defineCollection({
   type: 'content',
   schema: z.object({
-    title: z.string(),
+    title: z.string().default(''),
     date: z.coerce.date(),
     category: z.enum(CATEGORIES),
     tags: z.array(z.string()).default([]),

@@ -14,13 +14,18 @@ const dateStr = d.toLocaleDateString('ru-RU', {
   year: 'numeric',
 });
 const catSlug = categorySlug(post.data.category);
-const excerpt = post.body
+const cleanBody = post.body
   .replace(/<https?:\/\/[^>\s]+>/g, '')
   .replace(/\bhttps?:\/\/\S+/g, '')
   .replace(/[#>*_`\[\]\(\)!]/g, '')
   .replace(/\s+/g, ' ')
-  .trim()
-  .slice(0, 220);
+  .trim();
+
+// fallback заголовка: если в frontmatter title пустой — берём первое предложение тела
+const rawTitle = post.data.title?.trim();
+const displayTitle = rawTitle || cleanBody.slice(0, 80) + (cleanBody.length > 80 ? '…' : '') || dateStr;
+// если title использован как fallback из тела, не дублируем его в excerpt
+const excerpt = (rawTitle ? cleanBody : cleanBody.slice(displayTitle.length)).slice(0, 220);
 
 const postHref = `${base}/posts/${post.slug}/`;
 const categoryHref = `${base}/category/${catSlug}/`;
@@ -38,9 +43,9 @@ const categoryHref = `${base}/category/${catSlug}/`;
       <time datetime={d.toISOString()}>{dateStr}</time>
     </div>
     <h2 class="title">
-      <a href={postHref} class="title-link">{post.data.title}</a>
+      <a href={postHref} class="title-link">{displayTitle}</a>
     </h2>
-    {excerpt && <p class="excerpt">{excerpt}{post.body.length > 220 ? '…' : ''}</p>}
+    {excerpt && <p class="excerpt">{excerpt}{cleanBody.length > 220 ? '…' : ''}</p>}
     {post.data.telegram_url && (
       <div class="footer">
         <span class="badge">📎 файл в Telegram</span>

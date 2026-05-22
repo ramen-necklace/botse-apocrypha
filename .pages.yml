@@ -30,18 +30,12 @@ content:
         order: desc
     fields:
       - name: title
-        label: Заголовок
+        label: Заголовок (опционально)
         type: string
-        required: true
 
-      - name: date
-        label: Дата публикации
-        type: date
-        required: true
-        default: now
-        options:
-          time: true
-          format: "yyyy-MM-dd'T'HH:mm:ssXXX"
+      - name: body
+        label: Текст
+        type: rich-text
 
       - name: category
         label: Категория
@@ -60,6 +54,10 @@ content:
             - Файлы / принтабли
             - Цены и лоты
             - Прочее
+
+      - name: cover
+        label: Обложка (опционально)
+        type: image
 
       - name: tags
         label: Теги (опционально)
@@ -80,15 +78,17 @@ content:
         type: string
         description: Ссылка на пост в Telegram, если к статье прикреплён большой файл, который не лезет в репо (PDF, TTSMOD и т.п.).
 
-      - name: cover
-        label: Обложка (опционально)
-        type: image
-
       - name: images
         label: Картинки в статье (опционально)
         type: image
         list: true
 
-      - name: body
-        label: Текст
-        type: rich-text
+      # Дата проставляется автоматом из времени создания записи — пользователь её не видит.
+      - name: date
+        label: Дата
+        type: date
+        hidden: true
+        default: now
+        options:
+          time: true
+          format: "yyyy-MM-dd'T'HH:mm:ssXXX"
