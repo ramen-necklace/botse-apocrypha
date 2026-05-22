@@ -42,12 +42,34 @@ GUI-редактор — [Pages CMS](https://pagescms.org). Хостится у 
 Дальше: создаёшь/правишь пост в форме → Pages CMS коммитит markdown в `main` →
 GitHub Actions пересобирает сайт (~30 сек).
 
+## Структура
+
+```
+.pages.yml                   # схема контента для Pages CMS
+astro.config.mjs             # site + base
+public/images/<slug>/        # картинки к посту
+src/
+  content/posts/<YYYY-MM-DD-HHMMSS>.md
+  content/config.ts          # Zod-схема frontmatter и список категорий
+  components/                # Header, CategoryChips, PostCard, Ornament
+  pages/                     # index, category/[slug], posts/[slug]
+.github/
+  workflows/deploy.yml       # build → deploy → notify-telegram
+  scripts/notify_telegram.py # отправка анонсов в Telegram
+```
+
 ## Контент
 
 Каждый пост — отдельный markdown-файл в `src/content/posts/<timestamp>.md` с
 YAML frontmatter по схеме `src/content/config.ts`. Имя файла генерится Pages
-CMS из времени создания (`YYYY-MM-DD-HHMMSS`). Картинки лежат в
-`public/images/` и подключаются по абсолютному пути от корня сайта.
+CMS из времени создания (`YYYY-MM-DD-HHMMSS`) — slug в URL = это же имя.
+Картинки лежат в `public/images/<slug>/` и подключаются по абсолютному пути.
+
+Категория выбирается из закрытого списка (11 значений). Опциональные поля:
+`tags`, `sources` (внешние ссылки списком), `cover` (обложка карточки),
+`images`, и `telegram_url` — последний **только** если к посту прикреплён
+большой файл (PDF/видео/ttsmod/zip > 100 МБ), который физически хранится
+в Telegram. Не использовать `telegram_url` как «ссылку на источник».
 
 Новые посты добавляются через Pages CMS (форма коммитит markdown в репо).
 
