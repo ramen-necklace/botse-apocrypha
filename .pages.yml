@@ -83,12 +83,13 @@ content:
         type: image
         list: true
 
-      # Дата проставляется автоматом из времени создания записи — пользователь её не видит.
+      # Дата проставляется автоматом из времени создания записи. Pages CMS сам
+      # инициализирует date-поле текущим временем при создании, поэтому default
+      # тут не нужен — иначе валидация падает с «Please fix the errors before saving».
       - name: date
         label: Дата
         type: date
         hidden: true
-        default: now
         options:
           time: true
-          format: "yyyy-MM-dd'T'HH:mm:ssXXX"
+          format: "yyyy-MM-dd'T'HH:mm"
