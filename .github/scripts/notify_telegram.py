@@ -187,6 +187,12 @@ def send(token: str, chat_id: str, thread_id: str, text: str, cover_url: str | N
 def main(argv: list[str]) -> int:
     sys.stdout.reconfigure(encoding="utf-8")  # Windows CI safety
 
+    # Явный «не оповещать»: тег в любом из коммитов пуша.
+    commit_msg = os.environ.get("COMMIT_MESSAGE", "")
+    if "[skip-notify]" in commit_msg or "[skip notify]" in commit_msg:
+        print("[notify] [skip-notify] в commit message — пропускаю")
+        return 0
+
     token = env("TELEGRAM_BOT_TOKEN")
     chat = env("TELEGRAM_CHAT_ID")
     thread = env("TELEGRAM_THREAD_ID")

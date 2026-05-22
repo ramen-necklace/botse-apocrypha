@@ -14,7 +14,13 @@ const dateStr = d.toLocaleDateString('ru-RU', {
   year: 'numeric',
 });
 const catSlug = categorySlug(post.data.category);
-const excerpt = post.body.replace(/[#>*_`\[\]\(\)!]/g, '').replace(/\s+/g, ' ').trim().slice(0, 220);
+const excerpt = post.body
+  .replace(/<https?:\/\/[^>\s]+>/g, '')   // CommonMark autolinks <https://…>
+  .replace(/\bhttps?:\/\/\S+/g, '')        // голые URL'ы
+  .replace(/[#>*_`\[\]\(\)!]/g, '')        // markdown-разметка
+  .replace(/\s+/g, ' ')
+  .trim()
+  .slice(0, 220);
 ---
 
 <article class="card">
