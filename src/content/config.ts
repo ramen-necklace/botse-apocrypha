@@ -19,10 +19,8 @@ export type Category = (typeof CATEGORIES)[number];
 const posts = defineCollection({
   type: 'content',
   schema: z.object({
-    id: z.number().int(),
     title: z.string(),
     date: z.coerce.date(),
-    author: z.string(),
     category: z.enum(CATEGORIES),
     tags: z.array(z.string()).default([]),
     sources: z
@@ -33,10 +31,9 @@ const posts = defineCollection({
         })
       )
       .default([]),
-    telegram_url: z.string().url(),
+    telegram_url: z.string().url().optional(),
     images: z.array(z.string()).default([]),
     cover: z.string().default(''),
-    media_unavailable: z.boolean().default(false),
   }),
 });
 

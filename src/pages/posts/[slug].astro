@@ -26,8 +26,6 @@ const catSlug = categorySlug(post.data.category);
       <a href={`${base}/category/${catSlug}/`} class="cat">{post.data.category}</a>
       <h1>{post.data.title}</h1>
       <p class="meta muted">
-        <span>{post.data.author}</span>
-        <span aria-hidden="true">·</span>
         <time datetime={post.data.date.toISOString()}>{dateStr}</time>
       </p>
       {post.data.tags.length > 0 && (
@@ -57,23 +55,17 @@ const catSlug = categorySlug(post.data.category);
       </section>
     )}
 
-    {post.data.media_unavailable && (
+    {post.data.telegram_url && (
       <aside class="media-notice">
-        <p>
-          Медиа не выгружено из Telegram (слишком большой файл).
-          Открой исходный пост, чтобы скачать.
-        </p>
+        <p>К статье прикреплён файл в Telegram.</p>
         <a class="tg-btn" href={post.data.telegram_url} rel="noopener noreferrer" target="_blank">
-          Открыть в Telegram →
+          Скачать файл (Telegram) →
         </a>
       </aside>
     )}
 
     <footer class="post-foot">
       <Ornament />
-      <p class="muted">
-        Источник: <a href={post.data.telegram_url} rel="noopener noreferrer" target="_blank">пост в Telegram</a>
-      </p>
     </footer>
   </article>
 </Base>

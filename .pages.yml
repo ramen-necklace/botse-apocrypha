@@ -17,7 +17,10 @@ content:
     path: src/content/posts
     format: yaml-frontmatter
     extension: md
-    filename: "{id}.md"
+    # Имя файла генерится автоматом из времени создания записи — id руками вводить не нужно.
+    filename:
+      template: "{year}-{month}-{day}-{hour}{minute}{second}.md"
+      field: create
     view:
       primary: title
       fields: [title, category, date]
@@ -26,29 +29,19 @@ content:
         sort: date
         order: desc
     fields:
-      - name: id
-        label: ID (msg_id из Telegram)
-        type: number
-        required: true
-        description: Уникальный числовой ID. Для постов из Telegram — оригинальный msg_id; для новых придумать любой свободный.
-
       - name: title
         label: Заголовок
         type: string
         required: true
 
       - name: date
-        label: Дата
+        label: Дата публикации
         type: date
         required: true
+        default: now
         options:
           time: true
           format: "yyyy-MM-dd'T'HH:mm:ssXXX"
-
-      - name: author
-        label: Автор
-        type: string
-        required: true
 
       - name: category
         label: Категория
@@ -86,9 +79,10 @@ content:
             - { name: url, label: URL, type: string }
 
       - name: telegram_url
-        label: URL исходного поста в Telegram
+        label: Прикреплён файл в Telegram (опционально)
         type: string
-        required: true
+        required: false
+        description: Ссылка на пост в Telegram, если к статье прикреплён большой файл, который не лезет в репо (PDF, TTSMOD и т.п.).
 
       - name: images
         label: Картинки
@@ -102,11 +96,6 @@ content:
         label: Обложка
         type: image
         required: false
-
-      - name: media_unavailable
-        label: Медиа не выгружено из Telegram (большой файл)
-        type: boolean
-        default: false
 
       - name: body
         label: Текст

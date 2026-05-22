@@ -33,12 +33,11 @@ const excerpt = post.body.replace(/[#>*_`\[\]\(\)!]/g, '').replace(/\s+/g, ' ').
       </div>
       <h2 class="title">{post.data.title}</h2>
       {excerpt && <p class="excerpt">{excerpt}{post.body.length > 220 ? '…' : ''}</p>}
-      <div class="footer">
-        <span class="author">{post.data.author}</span>
-        {post.data.media_unavailable && (
-          <span class="badge">медиа в Telegram</span>
-        )}
-      </div>
+      {post.data.telegram_url && (
+        <div class="footer">
+          <span class="badge">📎 файл в Telegram</span>
+        </div>
+      )}
     </div>
   </a>
 </article>
