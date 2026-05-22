@@ -130,11 +130,12 @@ def slug_from_filename(path: Path) -> str:
     return path.stem
 
 
-def build_message(meta: dict[str, Any], body: str, site_url: str) -> tuple[str, str | None]:
-    """Возвращает (html_text, cover_url_or_None)."""
+def build_message(meta: dict[str, Any], body: str, site_url: str) -> tuple[str, str | None, str]:
+    """Возвращает (html_text, cover_url_or_None, post_url)."""
     title = html.escape(meta.get("title", "Без заголовка"))
     category = html.escape(meta.get("category", "Прочее"))
-    excerpt_budget = (CAPTION_LIMIT if meta.get("cover") else TEXT_LIMIT) - 350  # запас на title/линк/тег
+    # «Читать в Апокрифе» теперь inline-кнопка, не часть текста — больше места под excerpt.
+    excerpt_budget = (CAPTION_LIMIT if meta.get("cover") else TEXT_LIMIT) - 200
     excerpt = html.escape(make_excerpt(body, min(EXCERPT_TARGET, excerpt_budget)))
 
     post_url = f"{site_url.rstrip('/')}/posts/{slug_from_filename(Path(meta['_path']))}/"
@@ -144,8 +145,6 @@ def build_message(meta: dict[str, Any], body: str, site_url: str) -> tuple[str, 
         f"<i>#{category.replace(' ', '_').replace('/', '_')}</i>",
         "",
         excerpt,
-        "",
-        f'<a href="{html.escape(post_url, quote=True)}">Читать в Апокрифе →</a>',
     ]
     text = "\n".join(parts)
 
@@ -155,7 +154,7 @@ def build_message(meta: dict[str, Any], body: str, site_url: str) -> tuple[str, 
         cover_path = cover.lstrip("/")
         cover_url = f"{site_url.rstrip('/')}/{cover_path}"
 
-    return text, cover_url
+    return text, cover_url, post_url
 
 
 def telegram_call(token: str, method: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -166,7 +165,10 @@ def telegram_call(token: str, method: str, payload: dict[str, Any]) -> dict[str,
         return json.loads(resp.read().decode("utf-8"))
 
 
-def send(token: str, chat_id: str, thread_id: str, text: str, cover_url: str | None) -> dict[str, Any]:
+def send(token: str, chat_id: str, thread_id: str, text: str, cover_url: str | None, post_url: str) -> dict[str, Any]:
+    reply_markup = json.dumps({
+        "inline_keyboard": [[{"text": "📖 Читать в Апокрифе", "url": post_url}]]
+    }, ensure_ascii=False)
     if cover_url:
         return telegram_call(token, "sendPhoto", {
             "chat_id": chat_id,
@@ -174,13 +176,15 @@ def send(token: str, chat_id: str, thread_id: str, text: str, cover_url: str | N
             "photo": cover_url,
             "caption": text,
             "parse_mode": "HTML",
+            "reply_markup": reply_markup,
         })
     return telegram_call(token, "sendMessage", {
         "chat_id": chat_id,
         "message_thread_id": thread_id,
         "text": text,
         "parse_mode": "HTML",
-        "disable_web_page_preview": "false",
+        "disable_web_page_preview": "true",
+        "reply_markup": reply_markup,
     })
 
 
@@ -216,9 +220,9 @@ def main(argv: list[str]) -> int:
             continue
         meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
         meta["_path"] = str(path)
-        text, cover = build_message(meta, body, site)
+        text, cover, post_url = build_message(meta, body, site)
         try:
-            result = send(token, chat, thread, text, cover)
+            result = send(token, chat, thread, text, cover, post_url)
             ok = result.get("ok")
             print(f"[notify] {path.name}: {'OK' if ok else result}")
         except Exception as e:  # noqa: BLE001 — Actions всё равно покажет stderr
