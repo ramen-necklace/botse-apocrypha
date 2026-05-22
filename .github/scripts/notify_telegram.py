@@ -1,20 +1,19 @@
-"""Постит анонс новой статьи в топик «Апокриф» канала @TheElderScrollsRu.
+"""Постит анонс новой статьи в топик «Апокриф» канала @TheElderScrollsRu,
+а при правке уже опубликованной статьи редактирует ранее отправленное сообщение.
 
-Запускается из GitHub Actions после успешного деплоя. Читает список добавленных
-.md-файлов в src/content/posts/ из аргументов (передаются workflow'ом из git diff),
-для каждого формирует короткий анонс и шлёт через Bot API.
+Запускается из GitHub Actions после успешного деплоя. Workflow передаёт два
+аргумента-списка (через переводы строк): added (новые .md) и modified
+(изменённые .md). Скрипт держит mapping slug → {message_id, kind} в файле
+.telegram-sent.json в корне репо; этот файл коммитится самим workflow обратно.
 
 Env vars (через GitHub Secrets):
-    TELEGRAM_BOT_TOKEN   — токен бота от @BotFather
-    TELEGRAM_CHAT_ID     — @TheElderScrollsRu или числовой -100xxxxxxxxxx
-    TELEGRAM_THREAD_ID   — id топика «Апокриф» (=5)
-    SITE_URL             — https://ramen-necklace.github.io/botse-apocrypha
+    TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_THREAD_ID, SITE_URL
 
-Если хоть одного из них нет — скрипт молча выходит с кодом 0 (для случая, когда
-секреты ещё не настроены: деплой работает, уведомления просто не уходят).
+Если хоть одного из них нет — скрипт молча выходит с кодом 0.
 """
 from __future__ import annotations
 
+import argparse
 import html
 import json
 import os
@@ -27,10 +26,12 @@ from pathlib import Path
 from typing import Any
 
 POSTS_DIR = Path("src/content/posts")
+INDEX_PATH = Path(".telegram-sent.json")
 MAX_NOTIFICATIONS_PER_RUN = 5  # safeguard от взрывного коммита
-CAPTION_LIMIT = 1024  # Telegram sendPhoto
-TEXT_LIMIT = 4096  # Telegram sendMessage
-EXCERPT_TARGET = 600  # сколько символов тела показывать в анонсе
+MAX_EDITS_PER_RUN = 10         # правок может быть больше — менее опасно
+CAPTION_LIMIT = 1024
+TEXT_LIMIT = 4096
+EXCERPT_TARGET = 600
 
 
 def env(name: str) -> str | None:
@@ -39,11 +40,6 @@ def env(name: str) -> str | None:
 
 
 def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
-    """Очень узкий YAML-парсер под нашу схему (string, list-of-strings, list-of-objects).
-
-    Это намеренно не общий YAML, чтобы не тащить pyyaml. Структура frontmatter
-    у нас фиксированная (см. src/content/config.ts), достаточно покрыть её.
-    """
     lines = text.split("\n")
     if lines[0] != "---":
         raise ValueError("no frontmatter")
@@ -64,7 +60,6 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
         key, _, rest = line.partition(":")
         key = key.strip()
         rest = rest.strip()
-
         if rest == "" or rest == "[]":
             if rest == "[]":
                 data[key] = []
@@ -93,7 +88,6 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
         else:
             data[key] = _unquote(rest)
             i += 1
-
     return data, body
 
 
@@ -113,8 +107,7 @@ def _unquote(s: str) -> str:
 
 
 def make_excerpt(body: str, limit: int) -> str:
-    """Берёт первые `limit` символов тела, обрезает по предложению/слову."""
-    body = re.sub(r"<https?://[^>]+>", "", body)  # вырезать autolink-URL'ы
+    body = re.sub(r"<https?://[^>]+>", "", body)
     body = re.sub(r"\s+", " ", body).strip()
     if len(body) <= limit:
         return body
@@ -126,72 +119,130 @@ def make_excerpt(body: str, limit: int) -> str:
     return cut.rsplit(" ", 1)[0] + " …"
 
 
-def slug_from_filename(path: Path) -> str:
-    return path.stem
-
-
 def build_message(meta: dict[str, Any], body: str, site_url: str) -> tuple[str, str | None, str]:
-    """Возвращает (html_text, cover_url_or_None, post_url)."""
-    title = html.escape(meta.get("title", "Без заголовка"))
-    category = html.escape(meta.get("category", "Прочее"))
-    # «Читать в Апокрифе» теперь inline-кнопка, не часть текста — больше места под excerpt.
-    excerpt_budget = (CAPTION_LIMIT if meta.get("cover") else TEXT_LIMIT) - 200
-    excerpt = html.escape(make_excerpt(body, min(EXCERPT_TARGET, excerpt_budget)))
+    """Возвращает (html_text, cover_url_or_None, post_url). Title-fallback на первое
+    предложение тела, как и в PostCard.astro."""
+    raw_title = (meta.get("title") or "").strip()
+    cat = meta.get("category", "Прочее")
+    clean_body = re.sub(r"<https?://[^>]+>", "", body)
+    clean_body = re.sub(r"\s+", " ", clean_body).strip()
+    fallback_title = (clean_body[:80] + ("…" if len(clean_body) > 80 else "")) or cat
+    display_title = raw_title or fallback_title
 
-    post_url = f"{site_url.rstrip('/')}/posts/{slug_from_filename(Path(meta['_path']))}/"
+    excerpt_budget = (CAPTION_LIMIT if meta.get("cover") else TEXT_LIMIT) - 200
+    excerpt_source = body if raw_title else body[len(fallback_title):]
+    excerpt = html.escape(make_excerpt(excerpt_source, min(EXCERPT_TARGET, excerpt_budget)))
+
+    post_url = f"{site_url.rstrip('/')}/posts/{Path(meta['_path']).stem}/"
 
     parts = [
-        f"<b>{title}</b>",
-        f"<i>#{category.replace(' ', '_').replace('/', '_')}</i>",
+        f"<b>{html.escape(display_title)}</b>",
+        f"<i>#{html.escape(cat).replace(' ', '_').replace('/', '_')}</i>",
         "",
         excerpt,
     ]
     text = "\n".join(parts)
 
-    cover = meta.get("cover")
     cover_url = None
-    if cover:
-        cover_path = cover.lstrip("/")
+    if meta.get("cover"):
+        cover_path = str(meta["cover"]).lstrip("/")
         cover_url = f"{site_url.rstrip('/')}/{cover_path}"
-
     return text, cover_url, post_url
 
 
-def telegram_call(token: str, method: str, payload: dict[str, Any]) -> dict[str, Any]:
+def reply_markup_for(post_url: str) -> str:
+    return json.dumps({
+        "inline_keyboard": [[{"text": "📖 Читать в Апокрифе", "url": post_url}]]
+    }, ensure_ascii=False)
+
+
+def tg_call(token: str, method: str, payload: dict[str, Any]) -> dict[str, Any]:
     url = f"https://api.telegram.org/bot{token}/{method}"
     data = urllib.parse.urlencode(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, method="POST")
-    with urllib.request.urlopen(req, timeout=15) as resp:
+    with urllib.request.urlopen(req, timeout=20) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 
-def send(token: str, chat_id: str, thread_id: str, text: str, cover_url: str | None, post_url: str) -> dict[str, Any]:
-    reply_markup = json.dumps({
-        "inline_keyboard": [[{"text": "📖 Читать в Апокрифе", "url": post_url}]]
-    }, ensure_ascii=False)
+def send_new(token: str, chat_id: str, thread_id: str, text: str,
+             cover_url: str | None, post_url: str) -> dict[str, Any]:
+    markup = reply_markup_for(post_url)
     if cover_url:
-        return telegram_call(token, "sendPhoto", {
+        return tg_call(token, "sendPhoto", {
             "chat_id": chat_id,
             "message_thread_id": thread_id,
             "photo": cover_url,
             "caption": text,
             "parse_mode": "HTML",
-            "reply_markup": reply_markup,
+            "reply_markup": markup,
         })
-    return telegram_call(token, "sendMessage", {
+    return tg_call(token, "sendMessage", {
         "chat_id": chat_id,
         "message_thread_id": thread_id,
         "text": text,
         "parse_mode": "HTML",
         "disable_web_page_preview": "true",
-        "reply_markup": reply_markup,
+        "reply_markup": markup,
     })
 
 
-def main(argv: list[str]) -> int:
-    sys.stdout.reconfigure(encoding="utf-8")  # Windows CI safety
+def edit_existing(token: str, chat_id: str, message_id: int, kind: str,
+                  text: str, cover_url: str | None, post_url: str) -> dict[str, Any]:
+    """Редактирует уже отправленное сообщение.
 
-    # Явный «не оповещать»: тег в любом из коммитов пуша.
+    kind = 'photo' — было sendPhoto, редактируем caption (и саму картинку через
+                     editMessageMedia, если в frontmatter сейчас есть cover).
+    kind = 'text'  — было sendMessage, редактируем text.
+    Сменить тип (photo → text или наоборот) Telegram не позволяет: если cover
+    добавили/убрали уже после публикации, оставляем тип каким был. Caption и
+    подпись всё равно обновятся.
+    """
+    markup = reply_markup_for(post_url)
+    base = {"chat_id": chat_id, "message_id": message_id, "reply_markup": markup}
+
+    if kind == "photo":
+        if cover_url:
+            media = json.dumps({
+                "type": "photo",
+                "media": cover_url,
+                "caption": text,
+                "parse_mode": "HTML",
+            }, ensure_ascii=False)
+            return tg_call(token, "editMessageMedia", {**base, "media": media})
+        return tg_call(token, "editMessageCaption", {
+            **base, "caption": text, "parse_mode": "HTML",
+        })
+    return tg_call(token, "editMessageText", {
+        **base, "text": text, "parse_mode": "HTML",
+        "disable_web_page_preview": "true",
+    })
+
+
+def load_index() -> dict[str, dict]:
+    if INDEX_PATH.exists():
+        try:
+            return json.loads(INDEX_PATH.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {}
+    return {}
+
+
+def save_index(idx: dict[str, dict]) -> None:
+    INDEX_PATH.write_text(
+        json.dumps(idx, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8")
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--added", default="")
+    ap.add_argument("--modified", default="")
+    args = ap.parse_args()
+
     commit_msg = os.environ.get("COMMIT_MESSAGE", "")
     if "[skip-notify]" in commit_msg or "[skip notify]" in commit_msg:
         print("[notify] [skip-notify] в commit message — пропускаю")
@@ -202,35 +253,80 @@ def main(argv: list[str]) -> int:
     thread = env("TELEGRAM_THREAD_ID")
     site = env("SITE_URL")
     if not (token and chat and thread and site):
-        print("[notify] секреты не настроены (TELEGRAM_*/SITE_URL) — пропускаю отправку")
+        print("[notify] секреты не настроены — пропускаю")
         return 0
 
-    files = [Path(p) for p in argv[1:] if p.strip()]
-    if not files:
-        print("[notify] новых постов нет")
-        return 0
-    if len(files) > MAX_NOTIFICATIONS_PER_RUN:
-        print(f"[notify] {len(files)} новых файлов > лимита {MAX_NOTIFICATIONS_PER_RUN} — пропускаю "
-              f"(это похоже на массовый импорт, не на обычную публикацию)")
+    added = [Path(p) for p in args.added.split() if p.strip()]
+    modified = [Path(p) for p in args.modified.split() if p.strip()]
+    if not added and not modified:
+        print("[notify] нечего отправлять / редактировать")
         return 0
 
-    for path in files:
+    if len(added) > MAX_NOTIFICATIONS_PER_RUN:
+        print(f"[notify] {len(added)} новых > лимита {MAX_NOTIFICATIONS_PER_RUN} — пропускаю added")
+        added = []
+    if len(modified) > MAX_EDITS_PER_RUN:
+        print(f"[notify] {len(modified)} правок > лимита {MAX_EDITS_PER_RUN} — пропускаю edited")
+        modified = []
+
+    index = load_index()
+    dirty = False
+
+    def process(path: Path, is_new: bool) -> None:
+        nonlocal dirty
         if not path.exists():
-            print(f"[notify] {path} не найден, пропускаю")
-            continue
+            print(f"[notify] {path.name}: файл не существует — пропускаю")
+            return
         meta, body = parse_frontmatter(path.read_text(encoding="utf-8"))
         meta["_path"] = str(path)
         text, cover, post_url = build_message(meta, body, site)
+        slug = path.stem
+
         try:
-            result = send(token, chat, thread, text, cover, post_url)
-            ok = result.get("ok")
-            print(f"[notify] {path.name}: {'OK' if ok else result}")
-        except Exception as e:  # noqa: BLE001 — Actions всё равно покажет stderr
-            print(f"[notify] {path.name}: FAILED — {e}")
-            return 1
-        time.sleep(4)  # safety против rate-limit Telegram (20/min на канал)
+            if is_new:
+                result = send_new(token, chat, thread, text, cover, post_url)
+                if result.get("ok"):
+                    msg = result["result"]
+                    index[slug] = {
+                        "message_id": msg["message_id"],
+                        "kind": "photo" if cover else "text",
+                    }
+                    dirty = True
+                    print(f"[notify] + {path.name}: msg_id={msg['message_id']}")
+                else:
+                    print(f"[notify] + {path.name}: FAILED {result}")
+            else:
+                entry = index.get(slug)
+                if not entry:
+                    print(f"[notify] ~ {path.name}: не было отправлено раньше — пропускаю")
+                    return
+                result = edit_existing(
+                    token, chat, entry["message_id"], entry["kind"],
+                    text, cover, post_url,
+                )
+                if result.get("ok"):
+                    print(f"[notify] ~ {path.name}: edited msg_id={entry['message_id']}")
+                else:
+                    # частый кейс: Telegram говорит «message is not modified» — это OK
+                    desc = result.get("description", "")
+                    if "not modified" in desc:
+                        print(f"[notify] ~ {path.name}: без изменений ({desc})")
+                    else:
+                        print(f"[notify] ~ {path.name}: FAILED {result}")
+        except Exception as e:  # noqa: BLE001
+            print(f"[notify] {path.name}: EXCEPTION — {e}")
+        time.sleep(4)
+
+    for p in added:
+        process(p, is_new=True)
+    for p in modified:
+        process(p, is_new=False)
+
+    if dirty:
+        save_index(index)
+        print(f"[notify] обновлён {INDEX_PATH}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv))
+    raise SystemExit(main())

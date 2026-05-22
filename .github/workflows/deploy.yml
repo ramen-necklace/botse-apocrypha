@@ -43,24 +43,25 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
+    permissions:
+      contents: write   # чтобы коммитить .telegram-sent.json обратно в репо
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Collect newly added posts
+      - name: Diff posts (added + modified)
         id: diff
         run: |
-          # Только added .md в src/content/posts/ относительно предыдущего коммита.
-          # Если предыдущего коммита нет (первый push) — diff будет пустым, скрипт скипнет.
-          added=$(git diff --diff-filter=A --name-only HEAD^ HEAD -- 'src/content/posts/*.md' || true)
-          echo "files<<EOF" >> $GITHUB_OUTPUT
-          echo "$added" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          echo "Added posts:"
-          echo "$added"
+          added=$(git diff --diff-filter=A --name-only HEAD^ HEAD -- 'src/content/posts/*.md' | tr '\n' ' ')
+          modified=$(git diff --diff-filter=M --name-only HEAD^ HEAD -- 'src/content/posts/*.md' | tr '\n' ' ')
+          echo "added=$added" >> $GITHUB_OUTPUT
+          echo "modified=$modified" >> $GITHUB_OUTPUT
+          echo "Added: $added"
+          echo "Modified: $modified"
       - name: Notify Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -69,4 +70,17 @@ jobs:
           SITE_URL: ${{ secrets.SITE_URL || 'https://ramen-necklace.github.io/botse-apocrypha' }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
-          python .github/scripts/notify_telegram.py ${{ steps.diff.outputs.files }}
+          python .github/scripts/notify_telegram.py \
+            --added "${{ steps.diff.outputs.added }}" \
+            --modified "${{ steps.diff.outputs.modified }}"
+      - name: Commit updated index
+        run: |
+          if [[ -n "$(git status --porcelain .telegram-sent.json)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .telegram-sent.json
+            git commit -m "chore: update Telegram message-id index [skip-notify]"
+            git push
+          else
+            echo "no changes to .telegram-sent.json"
+          fi
