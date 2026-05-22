@@ -38,3 +38,34 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  notify-telegram:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Collect newly added posts
+        id: diff
+        run: |
+          # Только added .md в src/content/posts/ относительно предыдущего коммита.
+          # Если предыдущего коммита нет (первый push) — diff будет пустым, скрипт скипнет.
+          added=$(git diff --diff-filter=A --name-only HEAD^ HEAD -- 'src/content/posts/*.md' || true)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$added" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "Added posts:"
+          echo "$added"
+      - name: Notify Telegram
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
+          SITE_URL: ${{ secrets.SITE_URL || 'https://ramen-necklace.github.io/botse-apocrypha' }}
+        run: |
+          python .github/scripts/notify_telegram.py ${{ steps.diff.outputs.files }}
