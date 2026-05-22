@@ -53,15 +53,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Diff posts (added + modified)
+      - name: Diff posts (added + modified + deleted)
         id: diff
         run: |
           added=$(git diff --diff-filter=A --name-only HEAD^ HEAD -- 'src/content/posts/*.md' | tr '\n' ' ')
           modified=$(git diff --diff-filter=M --name-only HEAD^ HEAD -- 'src/content/posts/*.md' | tr '\n' ' ')
+          deleted=$(git diff --diff-filter=D --name-only HEAD^ HEAD -- 'src/content/posts/*.md' | tr '\n' ' ')
           echo "added=$added" >> $GITHUB_OUTPUT
           echo "modified=$modified" >> $GITHUB_OUTPUT
+          echo "deleted=$deleted" >> $GITHUB_OUTPUT
           echo "Added: $added"
           echo "Modified: $modified"
+          echo "Deleted: $deleted"
       - name: Notify Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -72,7 +75,8 @@ jobs:
         run: |
           python .github/scripts/notify_telegram.py \
             --added "${{ steps.diff.outputs.added }}" \
-            --modified "${{ steps.diff.outputs.modified }}"
+            --modified "${{ steps.diff.outputs.modified }}" \
+            --deleted "${{ steps.diff.outputs.deleted }}"
       - name: Commit updated index
         run: |
           if [[ -n "$(git status --porcelain .telegram-sent.json)" ]]; then

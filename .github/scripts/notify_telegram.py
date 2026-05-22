@@ -241,6 +241,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--added", default="")
     ap.add_argument("--modified", default="")
+    ap.add_argument("--deleted", default="")
     args = ap.parse_args()
 
     commit_msg = os.environ.get("COMMIT_MESSAGE", "")
@@ -258,8 +259,9 @@ def main() -> int:
 
     added = [Path(p) for p in args.added.split() if p.strip()]
     modified = [Path(p) for p in args.modified.split() if p.strip()]
-    if not added and not modified:
-        print("[notify] нечего отправлять / редактировать")
+    deleted = [Path(p) for p in args.deleted.split() if p.strip()]
+    if not added and not modified and not deleted:
+        print("[notify] нечего отправлять / редактировать / удалять")
         return 0
 
     if len(added) > MAX_NOTIFICATIONS_PER_RUN:
@@ -321,6 +323,36 @@ def main() -> int:
         process(p, is_new=True)
     for p in modified:
         process(p, is_new=False)
+
+    # Удаление: бот удаляет своё сообщение, скрипт чистит запись из индекса.
+    # Telegram позволяет ботам удалять свои сообщения в группах без ограничения 48ч.
+    for path in deleted:
+        slug = path.stem
+        entry = index.get(slug)
+        if not entry:
+            print(f"[notify] − {path.name}: не было в индексе — пропускаю")
+            continue
+        try:
+            result = tg_call(token, "deleteMessage", {
+                "chat_id": chat,
+                "message_id": entry["message_id"],
+            })
+            if result.get("ok"):
+                print(f"[notify] − {path.name}: deleted msg_id={entry['message_id']}")
+                index.pop(slug, None)
+                dirty = True
+            else:
+                desc = result.get("description", "")
+                # если сообщение уже удалено руками — тоже считаем «сделано», чистим индекс
+                if "message to delete not found" in desc or "MESSAGE_ID_INVALID" in desc:
+                    print(f"[notify] − {path.name}: сообщения уже нет в TG — чищу индекс")
+                    index.pop(slug, None)
+                    dirty = True
+                else:
+                    print(f"[notify] − {path.name}: FAILED {result}")
+        except Exception as e:  # noqa: BLE001
+            print(f"[notify] − {path.name}: EXCEPTION — {e}")
+        time.sleep(4)
 
     if dirty:
         save_index(index)
