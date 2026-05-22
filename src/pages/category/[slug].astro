@@ -1,0 +1,70 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import CategoryChips from '../../components/CategoryChips.astro';
+import PostCard from '../../components/PostCard.astro';
+import Ornament from '../../components/Ornament.astro';
+import { CATEGORIES, categorySlug, type Category } from '../../lib/categories';
+
+export async function getStaticPaths() {
+  const all = await getCollection('posts');
+  const counts: Record<string, number> = {};
+  for (const p of all) counts[p.data.category] = (counts[p.data.category] ?? 0) + 1;
+
+  return CATEGORIES.map((cat) => ({
+    params: { slug: categorySlug(cat) },
+    props: {
+      category: cat,
+      posts: all
+        .filter((p) => p.data.category === cat)
+        .sort((a, b) => b.data.date.getTime() - a.data.date.getTime()),
+      counts,
+    },
+  }));
+}
+
+const { category, posts, counts } = Astro.props;
+const slug = categorySlug(category as Category);
+
+function pluralPosts(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'материал';
+  if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'материала';
+  return 'материалов';
+}
+---
+
+<Base title={`${category} · Апокриф BotSE`}>
+  <section class="head">
+    <h1>{category}</h1>
+    <p class="muted">{posts.length} {pluralPosts(posts.length)}</p>
+    <Ornament />
+  </section>
+
+  <CategoryChips active={slug} counts={counts} />
+
+  {posts.length === 0 ? (
+    <p class="muted">Пока в этой категории пусто.</p>
+  ) : (
+    <div class="grid">
+      {posts.map((p) => <PostCard post={p} />)}
+    </div>
+  )}
+</Base>
+
+<style>
+  .head { text-align: center; padding: 1rem 0 0; }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+    margin-top: 1rem;
+  }
+  @media (min-width: 720px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1080px) {
+    .grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>

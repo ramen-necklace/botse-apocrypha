@@ -1,0 +1,33 @@
+# --- Node / Astro ---
+node_modules/
+dist/
+.astro/
+.output/
+
+# --- Логи и кеши ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.cache/
+.parcel-cache/
+
+# --- Env и секреты ---
+.env
+.env.*
+!.env.example
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Прочее ---
+*.tmp
+*.bak
+
+# --- Локальная памятка / конфиги AI-ассистента, не для публикации ---
+CLAUDE.md
+.claude/

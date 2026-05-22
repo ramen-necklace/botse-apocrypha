@@ -1,0 +1,123 @@
+:root {
+  --bg: #0a0a0a;
+  --bg-soft: #13110d;
+  --bg-card: #181410;
+  --gold: #c9a961;
+  --gold-bright: #d4af37;
+  --gold-dim: #8a7434;
+  --text: #e8dfc7;
+  --text-dim: #a89c80;
+  --border: #3a311e;
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  --shadow-gold: 0 0 18px rgba(201, 169, 97, 0.18);
+
+  --font-display: 'Cinzel', 'Trajan Pro', 'Times New Roman', serif;
+  --font-accent: 'MedievalSharp', 'IM Fell English', 'Cinzel', serif;
+  --font-body: Georgia, 'Times New Roman', 'Noto Serif', serif;
+
+  --max-width: 1100px;
+  --radius: 2px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at top, rgba(201, 169, 97, 0.05), transparent 60%),
+    var(--bg);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  color: var(--gold);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.5em;
+}
+
+h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); }
+h2 { font-size: clamp(1.4rem, 3vw, 1.8rem); }
+h3 { font-size: 1.2rem; }
+
+a {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+a:hover {
+  color: var(--gold-bright);
+  border-bottom-color: var(--gold-bright);
+}
+
+p { margin: 0 0 1em; }
+
+img { max-width: 100%; height: auto; }
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+code, pre {
+  font-family: 'Consolas', 'Menlo', monospace;
+  background: rgba(201, 169, 97, 0.08);
+  color: var(--text);
+  padding: 0.1em 0.3em;
+  border-radius: var(--radius);
+  font-size: 0.92em;
+}
+
+blockquote {
+  border-left: 2px solid var(--gold-dim);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+.dropcap::first-letter {
+  font-family: var(--font-accent);
+  font-size: 3.2em;
+  float: left;
+  line-height: 0.9;
+  padding: 0.05em 0.12em 0 0;
+  color: var(--gold-bright);
+}
+
+.muted { color: var(--text-dim); font-size: 0.92em; }
+
+.tag {
+  display: inline-block;
+  font-size: 0.78rem;
+  color: var(--gold-dim);
+  border: 1px solid var(--border);
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius);
+  margin-right: 0.3rem;
+}
+
+@media (max-width: 600px) {
+  html { font-size: 16px; }
+}

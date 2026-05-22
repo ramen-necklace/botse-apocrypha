@@ -1,0 +1,70 @@
+---
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href={`${base}/`} class="brand">
+      <span class="brand-mark">⚜</span>
+      <span class="brand-text">
+        <span class="brand-title">Апокриф</span>
+        <span class="brand-sub">The Elder Scrolls: Betrayal of the Second Era</span>
+      </span>
+    </a>
+    <nav class="site-nav">
+      <a href={`${base}/`}>Лента</a>
+      <a href="https://app.pagescms.org/" rel="noopener noreferrer" target="_blank" class="muted">
+        Редактировать
+      </a>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--bg-soft), var(--bg));
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--text);
+    border: 0;
+  }
+  .brand:hover { color: var(--gold-bright); }
+  .brand-mark {
+    font-size: 1.8rem;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .brand-text { display: flex; flex-direction: column; }
+  .brand-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+  }
+  .brand-sub {
+    font-family: var(--font-accent);
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+  .site-nav {
+    display: flex;
+    gap: 1rem;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    letter-spacing: 0.06em;
+  }
+</style>

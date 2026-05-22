@@ -1,0 +1,35 @@
+---
+// Простой золотой вензель-разделитель. Без растровых ассетов — только inline SVG.
+interface Props {
+  size?: number;
+}
+const { size = 48 } = Astro.props;
+---
+
+<div class="ornament" aria-hidden="true">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size * 4}
+    height={size}
+    viewBox="0 0 240 48"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1"
+  >
+    <line x1="0" y1="24" x2="90" y2="24" />
+    <line x1="150" y1="24" x2="240" y2="24" />
+    <circle cx="120" cy="24" r="5" />
+    <circle cx="120" cy="24" r="11" />
+    <path d="M120 6 L120 13 M120 35 L120 42 M102 24 L109 24 M131 24 L138 24" />
+    <path d="M108 12 L114 18 M126 18 L132 12 M108 36 L114 30 M126 30 L132 36" />
+  </svg>
+</div>
+
+<style>
+  .ornament {
+    display: flex;
+    justify-content: center;
+    color: var(--gold-dim);
+    margin: 2.5rem 0;
+  }
+</style>

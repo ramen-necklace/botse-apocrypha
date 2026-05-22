@@ -1,0 +1,62 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import CategoryChips from '../components/CategoryChips.astro';
+import PostCard from '../components/PostCard.astro';
+import Ornament from '../components/Ornament.astro';
+
+const posts = (await getCollection('posts')).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime()
+);
+
+const counts: Record<string, number> = {};
+for (const p of posts) {
+  counts[p.data.category] = (counts[p.data.category] ?? 0) + 1;
+}
+---
+
+<Base>
+  <section class="hero">
+    <h1>Апокриф</h1>
+    <p class="lede">
+      Свод материалов русскоязычного коммьюнити настолки
+      <em>The Elder Scrolls: Betrayal of the Second Era</em>.
+      Обзоры, видео, гайды, лор, файлы — собрано из топика
+      <a href="https://t.me/TheElderScrollsRu/5">«Апокриф»</a>.
+    </p>
+    <Ornament />
+  </section>
+
+  <CategoryChips counts={counts} />
+
+  {posts.length === 0 ? (
+    <p class="muted empty">Пока пусто. Запусти сидер: <code>python scripts/seed.py</code>.</p>
+  ) : (
+    <div class="grid">
+      {posts.map((p) => <PostCard post={p} />)}
+    </div>
+  )}
+</Base>
+
+<style>
+  .hero { text-align: center; padding: 1rem 0 0; }
+  .lede {
+    max-width: 640px;
+    margin: 0.5rem auto 0;
+    color: var(--text-dim);
+    font-size: 1.05rem;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+    margin-top: 1rem;
+  }
+  @media (min-width: 720px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1080px) {
+    .grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .empty { text-align: center; padding: 3rem 0; }
+</style>
