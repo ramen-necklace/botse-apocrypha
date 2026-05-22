@@ -24,7 +24,8 @@ content:
     view:
       primary: title
       fields: [title, category, date]
-      sort: [date]
+      sort: [date, category, title]
+      search: [title, category, body]
       default:
         sort: date
         order: desc
