@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import Header from '../components/Header.astro';
+import { ViewTransitions } from 'astro:transitions';
 
 interface Props {
   title?: string;
@@ -27,6 +28,7 @@ const {
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=MedievalSharp&display=swap"
     />
+    <ViewTransitions />
   </head>
   <body>
     <Header />
@@ -43,11 +45,11 @@ const {
       </div>
     </footer>
     <style>
-      .site-main { padding: 1.5rem 1.25rem 3rem; }
+      .site-main { padding: 0.75rem 1.25rem 3rem; }
       .site-footer {
         border-top: 1px solid var(--border);
-        padding: 1.5rem 0 2rem;
-        margin-top: 3rem;
+        padding: 1.25rem 0 1.75rem;
+        margin-top: 2.5rem;
       }
     </style>
   </body>

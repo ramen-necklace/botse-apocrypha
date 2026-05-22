@@ -3,8 +3,6 @@ import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import CategoryChips from '../components/CategoryChips.astro';
 import PostCard from '../components/PostCard.astro';
-import Ornament from '../components/Ornament.astro';
-
 const posts = (await getCollection('posts')).sort(
   (a, b) => b.data.date.getTime() - a.data.date.getTime()
 );
@@ -16,17 +14,6 @@ for (const p of posts) {
 ---
 
 <Base>
-  <section class="hero">
-    <h1>Апокриф</h1>
-    <p class="lede">
-      Свод материалов русскоязычного коммьюнити настолки
-      <em>The Elder Scrolls: Betrayal of the Second Era</em>.
-      Обзоры, видео, гайды, лор, файлы — собрано из топика
-      <a href="https://t.me/TheElderScrollsRu/5">«Апокриф»</a>.
-    </p>
-    <Ornament />
-  </section>
-
   <CategoryChips counts={counts} />
 
   {posts.length === 0 ? (
@@ -39,13 +26,6 @@ for (const p of posts) {
 </Base>
 
 <style>
-  .hero { text-align: center; padding: 1rem 0 0; }
-  .lede {
-    max-width: 640px;
-    margin: 0.5rem auto 0;
-    color: var(--text-dim);
-    font-size: 1.05rem;
-  }
   .grid {
     display: grid;
     grid-template-columns: 1fr;

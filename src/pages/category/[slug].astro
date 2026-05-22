@@ -3,7 +3,6 @@ import { getCollection } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import CategoryChips from '../../components/CategoryChips.astro';
 import PostCard from '../../components/PostCard.astro';
-import Ornament from '../../components/Ornament.astro';
 import { CATEGORIES, categorySlug, type Category } from '../../lib/categories';
 
 export async function getStaticPaths() {
@@ -36,13 +35,12 @@ function pluralPosts(n: number): string {
 ---
 
 <Base title={`${category} · Апокриф BotSE`}>
-  <section class="head">
-    <h1>{category}</h1>
-    <p class="muted">{posts.length} {pluralPosts(posts.length)}</p>
-    <Ornament />
-  </section>
-
   <CategoryChips active={slug} counts={counts} />
+
+  <header class="head">
+    <h1>{category}</h1>
+    <span class="muted count">{posts.length} {pluralPosts(posts.length)}</span>
+  </header>
 
   {posts.length === 0 ? (
     <p class="muted">Пока в этой категории пусто.</p>
@@ -54,7 +52,14 @@ function pluralPosts(n: number): string {
 </Base>
 
 <style>
-  .head { text-align: center; padding: 1rem 0 0; }
+  .head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0.5rem 0 0.75rem;
+  }
+  .head h1 { margin: 0; }
+  .count { font-size: 0.85rem; }
   .grid {
     display: grid;
     grid-template-columns: 1fr;
