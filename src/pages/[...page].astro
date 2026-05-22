@@ -1,0 +1,64 @@
+---
+import { getCollection } from 'astro:content';
+import type { GetStaticPaths, Page } from 'astro';
+import type { CollectionEntry } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import CategoryChips from '../components/CategoryChips.astro';
+import PostCard from '../components/PostCard.astro';
+import Pagination from '../components/Pagination.astro';
+
+export const getStaticPaths = (async ({ paginate }) => {
+  const all = (await getCollection('posts')).sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime()
+  );
+  return paginate(all, { pageSize: 20 });
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props as { page: Page<CollectionEntry<'posts'>> };
+
+const allPosts = await getCollection('posts');
+const counts: Record<string, number> = {};
+for (const p of allPosts) {
+  counts[p.data.category] = (counts[p.data.category] ?? 0) + 1;
+}
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const hrefForPage = (n: number) => (n === 1 ? `${base}/` : `${base}/${n}/`);
+const pageTitle = page.currentPage === 1
+  ? undefined
+  : `Лента · стр. ${page.currentPage} · Апокриф BotSE`;
+---
+
+<Base title={pageTitle}>
+  <CategoryChips counts={counts} />
+
+  {page.data.length === 0 ? (
+    <p class="muted empty">Пока пусто.</p>
+  ) : (
+    <div class="grid">
+      {page.data.map((p) => <PostCard post={p} />)}
+    </div>
+  )}
+
+  <Pagination
+    currentPage={page.currentPage}
+    lastPage={page.lastPage}
+    hrefForPage={hrefForPage}
+  />
+</Base>
+
+<style>
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+    margin-top: 1rem;
+  }
+  @media (min-width: 720px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (min-width: 1080px) {
+    .grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .empty { text-align: center; padding: 3rem 0; }
+</style>

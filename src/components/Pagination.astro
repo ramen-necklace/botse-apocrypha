@@ -1,0 +1,75 @@
+---
+interface Props {
+  currentPage: number;
+  lastPage: number;
+  /** Функция: номер страницы → href. Для page=1 обычно URL без числа. */
+  hrefForPage: (page: number) => string;
+}
+const { currentPage, lastPage, hrefForPage } = Astro.props;
+const pages = Array.from({ length: lastPage }, (_, i) => i + 1);
+---
+
+{lastPage > 1 && (
+  <nav class="pager" aria-label="Пагинация">
+    {currentPage > 1 && (
+      <a class="btn" href={hrefForPage(currentPage - 1)} data-astro-reload rel="prev">← Назад</a>
+    )}
+    <ol class="nums">
+      {pages.map((p) => (
+        <li>
+          {p === currentPage ? (
+            <span class="num active" aria-current="page">{p}</span>
+          ) : (
+            <a class="num" href={hrefForPage(p)} data-astro-reload>{p}</a>
+          )}
+        </li>
+      ))}
+    </ol>
+    {currentPage < lastPage && (
+      <a class="btn" href={hrefForPage(currentPage + 1)} data-astro-reload rel="next">Вперёд →</a>
+    )}
+  </nav>
+)}
+
+<style>
+  .pager {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 2.5rem 0 1rem;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+  }
+  .nums {
+    display: flex;
+    gap: 0.3rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .num, .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  @media (hover: hover) {
+    .num:hover, .btn:hover {
+      border-color: var(--gold-dim);
+      color: var(--gold);
+    }
+  }
+  .num.active {
+    border-color: var(--gold);
+    color: var(--gold-bright);
+    background: rgba(201, 169, 97, 0.08);
+  }
+</style>
