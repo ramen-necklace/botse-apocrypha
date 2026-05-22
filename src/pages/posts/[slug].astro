@@ -1,15 +1,51 @@
 ---
 import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import Ornament from '../../components/Ornament.astro';
 import { categorySlug } from '../../lib/categories';
 
-export async function getStaticPaths() {
-  const posts = await getCollection('posts');
-  return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+function strip(body: string): string {
+  return body
+    .replace(/<https?:\/\/[^>\s]+>/g, '')
+    .replace(/\bhttps?:\/\/\S+/g, '')
+    .replace(/[#>*_`\[\]\(\)!]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-const { post } = Astro.props;
+function titleOf(p: CollectionEntry<'posts'>): string {
+  const raw = p.data.title?.trim();
+  if (raw) return raw;
+  const body = strip(p.body);
+  if (body) return body.slice(0, 60) + (body.length > 60 ? '…' : '');
+  return p.data.category;
+}
+
+export async function getStaticPaths() {
+  const all = await getCollection('posts');
+  const byCat = new Map<string, CollectionEntry<'posts'>[]>();
+  for (const p of all) {
+    const list = byCat.get(p.data.category) ?? [];
+    list.push(p);
+    byCat.set(p.data.category, list);
+  }
+  // в каждой категории: сначала новые
+  for (const list of byCat.values()) {
+    list.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+  }
+
+  return all.map((post) => {
+    const list = byCat.get(post.data.category)!;
+    const idx = list.findIndex((p) => p.slug === post.slug);
+    // newer = тот, что свежее этого (выше в desc-сортировке), older = тот, что старее
+    const newer = idx > 0 ? list[idx - 1] : null;
+    const older = idx < list.length - 1 ? list[idx + 1] : null;
+    return { params: { slug: post.slug }, props: { post, newer, older } };
+  });
+}
+
+const { post, newer, older } = Astro.props;
 const { Content } = await post.render();
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const dateStr = post.data.date.toLocaleDateString('ru-RU', {
@@ -18,22 +54,19 @@ const dateStr = post.data.date.toLocaleDateString('ru-RU', {
   year: 'numeric',
 });
 const catSlug = categorySlug(post.data.category);
-
-const rawTitle = post.data.title?.trim();
-const cleanBody = post.body
-  .replace(/<https?:\/\/[^>\s]+>/g, '')
-  .replace(/\bhttps?:\/\/\S+/g, '')
-  .replace(/[#>*_`\[\]\(\)!]/g, '')
-  .replace(/\s+/g, ' ')
-  .trim();
-const displayTitle = rawTitle || cleanBody.slice(0, 80) + (cleanBody.length > 80 ? '…' : '') || `${post.data.category} · ${dateStr}`;
-const pageTitle = rawTitle || `${post.data.category} · ${dateStr}`;
+const displayTitle = titleOf(post);
+const pageTitle = post.data.title?.trim() || `${post.data.category} · ${dateStr}`;
 ---
 
 <Base title={`${pageTitle} · Апокриф BotSE`}>
   <article class="post">
+    <nav class="crumbs muted" aria-label="Хлебные крошки">
+      <a href={`${base}/`}>Лента</a>
+      <span aria-hidden="true">›</span>
+      <a href={`${base}/category/${catSlug}/`}>{post.data.category}</a>
+    </nav>
+
     <header class="post-head">
-      <a href={`${base}/category/${catSlug}/`} class="cat">{post.data.category}</a>
       <h1>{displayTitle}</h1>
       <p class="meta muted">
         <time datetime={post.data.date.toISOString()}>{dateStr}</time>
@@ -74,6 +107,23 @@ const pageTitle = rawTitle || `${post.data.category} · ${dateStr}`;
       </aside>
     )}
 
+    {(older || newer) && (
+      <nav class="neighbors" aria-label="Соседние посты в категории">
+        {older ? (
+          <a class="neighbor older" href={`${base}/posts/${older.slug}/`}>
+            <span class="dir">← Ранее в «{post.data.category}»</span>
+            <span class="ttl">{titleOf(older)}</span>
+          </a>
+        ) : <span class="neighbor placeholder"></span>}
+        {newer ? (
+          <a class="neighbor newer" href={`${base}/posts/${newer.slug}/`}>
+            <span class="dir">Позже в «{post.data.category}» →</span>
+            <span class="ttl">{titleOf(newer)}</span>
+          </a>
+        ) : <span class="neighbor placeholder"></span>}
+      </nav>
+    )}
+
     <footer class="post-foot">
       <Ornament />
     </footer>
@@ -82,14 +132,17 @@ const pageTitle = rawTitle || `${post.data.category} · ${dateStr}`;
 
 <style>
   .post { max-width: 760px; margin: 0 auto; }
-  .post-head { text-align: center; padding-top: 0.5rem; }
-  .cat {
-    font-family: var(--font-display);
+  .crumbs {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
     font-size: 0.85rem;
-    letter-spacing: 0.08em;
-    color: var(--gold);
-    border: 0;
+    padding: 0.25rem 0 0.75rem;
   }
+  .crumbs a { color: var(--text-dim); border: 0; }
+  .crumbs a:hover { color: var(--gold); }
+  .post-head { text-align: center; padding-top: 0.25rem; }
   .meta {
     display: flex;
     justify-content: center;
@@ -111,9 +164,7 @@ const pageTitle = rawTitle || `${post.data.category} · ${dateStr}`;
     margin: 1rem 0;
   }
   .prose :global(h2) { margin-top: 2rem; }
-  .prose :global(a) {
-    word-break: break-word;
-  }
+  .prose :global(a) { word-break: break-word; }
   .sources {
     border-top: 1px solid var(--border);
     margin-top: 2.5rem;
@@ -142,4 +193,40 @@ const pageTitle = rawTitle || `${post.data.category} · ${dateStr}`;
   }
   .tg-btn:hover { background: rgba(201, 169, 97, 0.1); border-bottom-color: var(--gold); }
   .post-foot { text-align: center; margin-top: 2rem; }
+
+  .neighbors {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 2.5rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.5rem;
+  }
+  .neighbor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: inherit;
+    transition: border-color 0.15s;
+  }
+  .neighbor:hover { border-color: var(--gold-dim); }
+  .neighbor .dir {
+    font-family: var(--font-display);
+    font-size: 0.78rem;
+    color: var(--gold-dim);
+    letter-spacing: 0.04em;
+  }
+  .neighbor .ttl {
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+  .neighbor.newer { text-align: right; }
+  .neighbor.placeholder { border: 0; padding: 0; }
+  @media (max-width: 560px) {
+    .neighbors { grid-template-columns: 1fr; }
+    .neighbor.newer { text-align: left; }
+  }
 </style>
